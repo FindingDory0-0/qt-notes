@@ -35,7 +35,14 @@ const UPDATE_SNIPPET = `
 
 const build = new Date(Date.now() + 9 * 3600e3).toISOString().replace(/[-:]/g, '').slice(0, 13); // KST, 예: 20261026T1130
 let html = readFileSync(SOURCE, 'utf8');
-html = html.replace('<head>', `<head>\n<meta name="qt-build" content="${build}">`);
+// 잠금 해제 후 문서가 교체돼도 앱 설치 정보(manifest·아이콘)가 남도록 같이 넣는다
+const APP_HEAD = `<meta name="qt-build" content="${build}">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#ffffff">`;
+html = html.replace('<head>', '<head>\n' + APP_HEAD);
 html = html.replace('</body>', UPDATE_SNIPPET + '</body>');
 
 const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
