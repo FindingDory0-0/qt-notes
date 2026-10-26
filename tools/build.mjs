@@ -60,9 +60,18 @@ const UPDATE_SNIPPET = `
   addEventListener('appinstalled', ()=>{ box.style.display='none'; });
   // 브라우저가 설치 신호를 주지 않는 경우(아이폰 Safari 등): 메뉴로 추가하는 방법 안내
   setTimeout(()=>{ if (window.__qtInstall || box.style.display==='block') return;
-    const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
-    document.getElementById('qt-install-msg').textContent = ios ? '공유 버튼 → "홈 화면에 추가"를 눌러 주세요.' : '브라우저 메뉴에서 "홈 화면에 추가" 또는 "앱 설치"를 눌러 주세요.';
-    go.style.display='none'; document.getElementById('qt-install-later').textContent='닫기';
+    const ua=navigator.userAgent, ios=/iphone|ipad|ipod/i.test(ua), samsung=/SamsungBrowser/i.test(ua);
+    const msg=document.getElementById('qt-install-msg');
+    document.getElementById('qt-install-later').textContent='닫기';
+    if (samsung) {
+      // 삼성 인터넷은 이 사이트에 설치 신호를 주지 않음 → Chrome으로 열도록 안내
+      msg.textContent='삼성 인터넷에서는 바로 설치가 안 돼요. Chrome에서 열면 설치할 수 있어요.';
+      go.textContent='Chrome으로 열기';
+      go.onclick=()=>{ location.href='intent://'+location.host+location.pathname+'#Intent;scheme=https;package=com.android.chrome;end'; };
+    } else {
+      msg.textContent = ios ? '공유 버튼 → "홈 화면에 추가"를 눌러 주세요.' : '브라우저 메뉴에서 "홈 화면에 추가" 또는 "앱 설치"를 눌러 주세요.';
+      go.style.display='none';
+    }
     box.style.display='block';
   }, 6000);
 })();
