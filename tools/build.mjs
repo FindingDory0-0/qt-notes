@@ -63,15 +63,10 @@ const UPDATE_SNIPPET = `
     const ua=navigator.userAgent, ios=/iphone|ipad|ipod/i.test(ua), samsung=/SamsungBrowser/i.test(ua);
     const msg=document.getElementById('qt-install-msg');
     document.getElementById('qt-install-later').textContent='닫기';
-    if (samsung) {
-      // 삼성 인터넷은 이 사이트에 설치 신호를 주지 않음 → Chrome으로 열도록 안내
-      msg.textContent='삼성 인터넷에서는 바로 설치가 안 돼요. Chrome에서 열면 설치할 수 있어요.';
-      go.textContent='Chrome으로 열기';
-      go.onclick=()=>{ location.href='intent://'+location.host+location.pathname+'#Intent;scheme=https;package=com.android.chrome;end'; };
-    } else {
-      msg.textContent = ios ? '공유 버튼 → "홈 화면에 추가"를 눌러 주세요.' : '브라우저 메뉴에서 "홈 화면에 추가" 또는 "앱 설치"를 눌러 주세요.';
-      go.style.display='none';
-    }
+    msg.textContent = ios ? '공유 버튼 → "홈 화면에 추가"를 눌러 주세요.'
+      : samsung ? '메뉴(≡) → "현재 페이지 추가" → "홈 화면"을 눌러 주세요.'
+      : '브라우저 메뉴에서 "홈 화면에 추가" 또는 "앱 설치"를 눌러 주세요.';
+    go.style.display='none';
     box.style.display='block';
   }, 6000);
 })();
