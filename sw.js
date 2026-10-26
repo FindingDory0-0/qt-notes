@@ -3,7 +3,7 @@
  *   새 버전을 받으면 열린 페이지에 'page-updated'를 보내 "새로고침" 안내를 띄운다.
  * - 웹폰트(jsdelivr): 처음 쓸 때 캐시해서 오프라인에서도 같은 글꼴로 보이게 한다.
  */
-const SHELL = 'qt-notes-shell-v1';
+const SHELL = 'qt-notes-shell-v2';
 const FONTS = 'qt-notes-fonts-v1';
 const KEEP = [SHELL, FONTS];
 const PAGE = new URL('./', self.registration.scope).href;

@@ -31,6 +31,42 @@ const UPDATE_SNIPPET = `
   setInterval(()=>{ fetch('./version.txt',{cache:'no-store'}).then(r=>r.text()).then(t=>{ if(mine&&t.trim()&&t.trim()!==mine) show(); }).catch(()=>{}); }, 10*60*1000);
 })();
 </script>
+<div id="qt-install" style="display:none;position:fixed;left:12px;right:12px;bottom:14px;z-index:98;max-width:420px;margin:0 auto;background:#fff;border:1px solid #e6e6e1;border-radius:16px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.14);font-size:14px;color:#1a1a18">
+  <div style="display:flex;align-items:center;gap:12px">
+    <img src="icons/icon-192.png" alt="" style="width:40px;height:40px;border-radius:10px;flex:none">
+    <div style="flex:1;line-height:1.45"><b>홈 화면에 설치할까요?</b><br><span id="qt-install-msg" style="font-size:12.5px;color:#8a8a84">앱처럼 바로 열리고, 인터넷이 없어도 볼 수 있어요.</span></div>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+    <button id="qt-install-later" style="font:inherit;font-size:13.5px;border:1px solid #cfcfc8;background:#fff;color:#4a4a45;border-radius:10px;padding:8px 14px;cursor:pointer">나중에</button>
+    <button id="qt-install-go" style="font:inherit;font-size:13.5px;font-weight:700;border:0;background:#1f5f5b;color:#fff;border-radius:10px;padding:8px 16px;cursor:pointer">설치</button>
+  </div>
+</div>
+<script>
+(function(){
+  // 이미 홈 화면 앱으로 열었으면 안내하지 않음
+  if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) return;
+  const KEY='qt-install-later', box=document.getElementById('qt-install');
+  try { const t=+localStorage.getItem(KEY); if (t && Date.now()-t < 3*864e5) return; } catch(e) {}
+  const later=()=>{ box.style.display='none'; try{localStorage.setItem(KEY,String(Date.now()))}catch(e){} };
+  document.getElementById('qt-install-later').onclick=later;
+  const go=document.getElementById('qt-install-go');
+  function ready(){
+    go.textContent='설치'; go.style.display='';
+    go.onclick=async()=>{ const p=window.__qtInstall; if(!p) return; p.prompt(); const r=await p.userChoice.catch(()=>null); window.__qtInstall=null; box.style.display='none'; if(!r||r.outcome!=='accepted') later(); };
+    box.style.display='block';
+  }
+  if (window.__qtInstall) ready(); else addEventListener('qt-installable', ready, { once:true });
+  addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); window.__qtInstall=e; ready(); });
+  addEventListener('appinstalled', ()=>{ box.style.display='none'; });
+  // 브라우저가 설치 신호를 주지 않는 경우(아이폰 Safari 등): 메뉴로 추가하는 방법 안내
+  setTimeout(()=>{ if (window.__qtInstall || box.style.display==='block') return;
+    const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+    document.getElementById('qt-install-msg').textContent = ios ? '공유 버튼 → "홈 화면에 추가"를 눌러 주세요.' : '브라우저 메뉴에서 "홈 화면에 추가" 또는 "앱 설치"를 눌러 주세요.';
+    go.style.display='none'; document.getElementById('qt-install-later').textContent='닫기';
+    box.style.display='block';
+  }, 6000);
+})();
+</script>
 `;
 
 const build = new Date(Date.now() + 9 * 3600e3).toISOString().replace(/[-:]/g, '').slice(0, 13); // KST, 예: 20261026T1130

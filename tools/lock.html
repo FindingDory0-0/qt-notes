@@ -49,6 +49,8 @@
   const form = document.getElementById('f'), err = document.getElementById('err'), go = document.getElementById('go');
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  // 설치 가능 신호를 잠금 해제 전에 받아 두었다가, 해제된 페이지에서 "설치" 안내에 쓴다
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); window.__qtInstall = e; dispatchEvent(new Event('qt-installable')); });
 
   async function open(key){
     const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv:b64(P.iv) }, key, b64(P.ct));
