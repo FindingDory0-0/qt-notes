@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="qt-build" content="__BUILD__">
+<title>QT 노트</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="QT 노트">
+<style>
+  :root{--ink:#1a1a18;--ink-3:#8a8a84;--line:#e6e6e1;--accent:#1f5f5b}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fafaf8;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;padding:16px}
+  .box{width:100%;max-width:340px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:28px 24px}
+  .logo{width:44px;height:44px;border-radius:11px;background:var(--accent);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:16px}
+  h1{font-size:18px;margin:0 0 4px}
+  p{font-size:13px;color:var(--ink-3);margin:0 0 18px}
+  input[type=password]{width:100%;font:inherit;font-size:16px;padding:11px 13px;border:1px solid #cfcfc8;border-radius:10px;outline:none}
+  input[type=password]:focus{border-color:var(--accent)}
+  label{display:flex;align-items:center;gap:8px;font-size:13px;color:#4a4a45;margin:12px 0 16px}
+  button{width:100%;font:inherit;font-size:15px;font-weight:700;padding:11px;border:0;border-radius:10px;background:var(--accent);color:#fff;cursor:pointer}
+  button:disabled{opacity:.6}
+  .err{color:#a3264b;font-size:13px;min-height:18px;margin-top:10px}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<form class="box hide" id="f" autocomplete="off">
+  <div class="logo">QT</div>
+  <h1>QT 노트</h1>
+  <p>비밀번호를 입력하세요.</p>
+  <input type="password" id="pw" autocomplete="current-password" placeholder="비밀번호" required>
+  <label><input type="checkbox" id="keep" checked> 이 기기에서 기억하기</label>
+  <button id="go">열기</button>
+  <div class="err" id="err"></div>
+</form>
+<script id="payload" type="application/json">__PAYLOAD__</script>
+<script>
+(async function(){
+  const P = JSON.parse(document.getElementById('payload').textContent);
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const enc = u => btoa(String.fromCharCode(...new Uint8Array(u)));
+  const KEY = 'qt-key';
+  const form = document.getElementById('f'), err = document.getElementById('err'), go = document.getElementById('go');
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+  async function open(key){
+    const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv:b64(P.iv) }, key, b64(P.ct));
+    const html = new TextDecoder().decode(pt);
+    // 잠금 화면 문서를 복호화한 문서로 통째로 교체 (document.write는 로딩 중에 호출되면 덧붙여지므로 쓰지 않음)
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    document.replaceChild(document.adoptNode(doc.documentElement), document.documentElement);
+    // DOMParser로 들어온 <script>는 실행되지 않으므로 새로 만들어 순서대로 실행
+    for (const old of [...document.querySelectorAll('script')]) {
+      const s = document.createElement('script');
+      for (const a of old.attributes) s.setAttribute(a.name, a.value);
+      s.textContent = old.textContent;
+      old.replaceWith(s);
+    }
+    if (location.hash) { const t = document.getElementById(decodeURIComponent(location.hash.slice(1))); if (t) t.scrollIntoView(); }
+  }
+
+  // 저장된 키가 있으면 바로 열기
+  let saved = null;
+  try { saved = localStorage.getItem(KEY); } catch(e) {}
+  if (saved) {
+    try {
+      const k = await crypto.subtle.importKey('raw', b64(saved), 'AES-GCM', false, ['decrypt']);
+      await open(k); return;
+    } catch(e) { try { localStorage.removeItem(KEY); } catch(_) {} }
+  }
+  form.classList.remove('hide');
+  document.getElementById('pw').focus();
+
+  form.addEventListener('submit', async ev => {
+    ev.preventDefault();
+    err.textContent = ''; go.disabled = true; go.textContent = '여는 중…';
+    try {
+      const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(document.getElementById('pw').value), 'PBKDF2', false, ['deriveKey']);
+      const key = await crypto.subtle.deriveKey({ name:'PBKDF2', hash:'SHA-256', salt:b64(P.salt), iterations:P.iter }, base, { name:'AES-GCM', length:256 }, true, ['decrypt']);
+      if (document.getElementById('keep').checked) {
+        const raw = await crypto.subtle.exportKey('raw', key);
+        await crypto.subtle.decrypt({ name:'AES-GCM', iv:b64(P.iv) }, key, b64(P.ct)); // 맞는 비밀번호일 때만 저장
+        try { localStorage.setItem(KEY, enc(raw)); } catch(e) {}
+      }
+      await open(key);
+    } catch(e) {
+      err.textContent = '비밀번호가 맞지 않습니다.';
+      go.disabled = false; go.textContent = '열기';
+    }
+  });
+})();
+</script>
+</body>
+</html>
